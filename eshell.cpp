@@ -39,6 +39,22 @@ void executeSingleCommand(const command& cmd) {
     delete[] argv;
 }
 
+void executePipeline(const command& cmd){
+
+}
+
+void executeSequential(const command& cmd){
+
+}
+
+void executeParallel(const command& cmd){
+
+}
+
+void executeSubshell(const command& cmd){
+
+}
+
 int main() {
     std::string line;
     parsed_input input;
@@ -66,6 +82,14 @@ int main() {
         // Execute single command
         if (input.num_inputs == 1 && input.inputs[0].type == INPUT_TYPE_COMMAND) {
             executeSingleCommand(input.inputs[0].data.cmd);
+        }else if (input.separator == SEPARATOR_PIPE){
+            executePipeline(input.inputs[0].data.cmd);
+        } else if (input.separator == SEPARATOR_SEQ){
+            executeSequential(input.inputs[0].data.cmd);
+        } else if (input.separator == SEPARATOR_PARA){
+            executeParallel(input.inputs[0].data.cmd);
+        } else if (input.separator == SEPARATOR_NONE){
+            executeSubshell(input.inputs[0].data.cmd);
         }
 
         // Clean up
