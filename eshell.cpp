@@ -39,17 +39,19 @@ void executeSingleCommand(const command& cmd) {
     delete[] argv;
 }
 
-void executePipeline(single_input[] inputs, int size){
+void executePipeline(single_input* inputs, int size){
     int pipefd[2]; // 0 is the read end, 1 is the write end
+    // store pipe file descriptors
+    int pipefds[size - 1][2];
 
-    for (int i = 0; i < size; i++){
-        if (pipe(pipefd) == -1) {
+    for (int i = 0; i < size - 1; i++) {
+        if (pipe(pipefds[i]) == -1) {
             perror("pipe");
             exit(EXIT_FAILURE);
         }
+    }
 
-        pipe(pipefd);
-
+    for (int i = 0; i < size; i++){
         pid_t pid = fork();
 
         if (pid == -1) {
@@ -58,30 +60,53 @@ void executePipeline(single_input[] inputs, int size){
         } else if (pid == 0) {
             // Child process
             if (i == 0) {
-                // read end should be connected to stdin
-                dup2(pipefd[0], STDIN_FILENO);
-            }else {
-                // read end should be connected to the write end of the previous pipe
-                dup2(pipe)
+                // write to the next pipe
+                dup2(pipefds[i][1], STDOUT_FILENO);
+            }else if (i < size - 1){
+                // read from the previous pipe, write to the next pipe
+                dup2(pipefds[i-1][0], STDIN_FILENO);
+                dup2(pipefds[i][1], STDOUT_FILENO);
+            } else {
+                // read from the previous pipe
+                dup2(pipefds[i - 1][0], STDIN_FILENO);
             }
-        } else {
-            // Parent process
-            close(pipefd[1]); // Close the write end of the pipe
-            close(pipefd[0]); // Close the read end of the pipe
-        }
 
+            for (int j = 0; j < size - 1; j++) {
+                close(pipefds[j][0]);
+                close(pipefds[j][1]);
+            }
+
+            std::vector<std::string> args;
+            for (int j = 0; inputs[i].data.cmd.args[j] != nullptr; ++j) {
+                args.push_back(std::string(inputs[i].data.cmd.args[j]));
+            }
+
+            char** argv = vectorToCharArray(args);
+            execvp(argv[0], argv);
+        }
+    }
+
+    // close all pipe fds in the parent
+    for (int i = 0; i < size - 1; i++) {
+        close(pipefds[i][0]);
+        close(pipefds[i][1]);
+    }
+
+    // reap the child processes
+    for (int i = 0; i < size; i++){
+        wait(nullptr);
     }
 }
 
-void executeSequential(const command& cmd){
+void executeSequential(single_input* inputs, int size){
 
 }
 
-void executeParallel(const command& cmd){
+void executeParallel(single_input* inputs, int size){
 
 }
 
-void executeSubshell(const command& cmd){
+void executeSubshell(single_input* inputs, int size){
 
 }
 
@@ -115,11 +140,11 @@ int main() {
         }else if (input.separator == SEPARATOR_PIPE){
             executePipeline(input.inputs, input.num_inputs);
         } else if (input.separator == SEPARATOR_SEQ){
-            executeSequential(input.inputs);
+            executeSequential(input.inputs, input.num_inputs);
         } else if (input.separator == SEPARATOR_PARA){
-            executeParallel(input.inputs);
+            executeParallel(input.inputs, input.num_inputs);
         } else if (input.separator == SEPARATOR_NONE){
-            executeSubshell(input.inputs);
+            executeSubshell(input.inputs, input.num_inputs);
         }
 
         // Clean up
