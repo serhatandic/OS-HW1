@@ -6,22 +6,31 @@
 #include <sys/wait.h>
 #include "parser.h"
 
-char** vectorToCharArray(const std::vector<std::string>& vec) {
+
+void freeCharArray(char** argv, size_t size) {
+    for (size_t i = 0; i < size; ++i) {
+        delete[] argv[i];
+    }
+    delete[] argv;
+}
+
+char** vectorToCharArray(const command& cmd) {
+    std::vector<std::string> vec;
+    for (int j = 0; cmd.args[j] != nullptr; ++j) {
+        vec.push_back(std::string(cmd.args[j]));
+    }
+
     char** args = new char*[vec.size() + 1];
     for (size_t i = 0; i < vec.size(); ++i) {
-        args[i] = const_cast<char*>(vec[i].c_str());
+        args[i] = new char[vec[i].size() + 1];
+        strcpy(args[i], vec[i].c_str());
     }
     args[vec.size()] = nullptr;
     return args;
 }
 
 void executeSingleCommand(const command& cmd) {
-    std::vector<std::string> args;
-    for (int i = 0; cmd.args[i] != nullptr; ++i) {
-        args.push_back(std::string(cmd.args[i]));
-    }
-
-    char** argv = vectorToCharArray(args);
+    char** argv = vectorToCharArray(cmd);
     pid_t pid = fork();
 
     if (pid == -1) {
@@ -36,7 +45,10 @@ void executeSingleCommand(const command& cmd) {
         // Parent process
         wait(nullptr);
     }
-    delete[] argv;
+    
+    // Free the memory
+    size_t argvSize = sizeof(argv);
+    freeCharArray(argv, argvSize);
 }
 
 void executePipeline(single_input* inputs, int size){
@@ -76,13 +88,14 @@ void executePipeline(single_input* inputs, int size){
                 close(pipefds[j][1]);
             }
 
-            std::vector<std::string> args;
-            for (int j = 0; inputs[i].data.cmd.args[j] != nullptr; ++j) {
-                args.push_back(std::string(inputs[i].data.cmd.args[j]));
-            }
 
-            char** argv = vectorToCharArray(args);
+
+            char** argv = vectorToCharArray(inputs[i].data.cmd);
             execvp(argv[0], argv);
+
+            // free the memory
+            size_t argvSize = sizeof(argv);
+            freeCharArray(argv, argvSize);
         }
     }
 
@@ -96,6 +109,7 @@ void executePipeline(single_input* inputs, int size){
     for (int i = 0; i < size; i++){
         wait(nullptr);
     }
+
 }
 
 void executeSequential(single_input* inputs, int size){
