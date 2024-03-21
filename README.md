@@ -20,3 +20,6 @@ PIPELINE
 
 ---
 
+cat eshell.cpp | grep pipe
+
+echo "hello" | grep o ; echo "zab" | grep b ; echo "zab" | grep a ; echo "finally" ; echo "zab" | grep z 
