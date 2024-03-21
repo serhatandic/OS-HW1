@@ -33,14 +33,9 @@ void executeSingleCommand(const command& cmd) {
     char** argv = vectorToCharArray(cmd);
     pid_t pid = fork();
 
-    if (pid == -1) {
-        perror("fork");
-        exit(EXIT_FAILURE);
-    } else if (pid == 0) {
+    if (pid == 0) {
         // Child process. The first argument is the command to execute, rest are the arguments
         execvp(argv[0], argv);
-        perror("execvp");
-        exit(EXIT_FAILURE);
     } else {
         // Parent process
         wait(nullptr);
@@ -57,19 +52,13 @@ void executePipeline(single_input* inputs, int size){
     int pipefds[size - 1][2];
 
     for (int i = 0; i < size - 1; i++) {
-        if (pipe(pipefds[i]) == -1) {
-            perror("pipe");
-            exit(EXIT_FAILURE);
-        }
+        pipe(pipefds[i]);
     }
 
     for (int i = 0; i < size; i++){
         pid_t pid = fork();
 
-        if (pid == -1) {
-            perror("fork");
-            exit(EXIT_FAILURE);
-        } else if (pid == 0) {
+        if (pid == 0) {
             // Child process
             if (i == 0) {
                 // write to the next pipe
