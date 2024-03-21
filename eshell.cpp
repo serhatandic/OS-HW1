@@ -149,6 +149,55 @@ void executePipelineSubInput(command* cmd, int size){
     }
 }
 
+// dont wait for the pipeline to finish, rest is the same as subinput
+std::vector<pid_t> executePipelineForParallel(command* cmd, int size){
+    std::vector<pid_t> pids;
+    int pipefd[2]; // 0 is the read end, 1 is the write end
+    // store pipe file descriptors
+    int pipefds[size - 1][2];
+
+    for (int i = 0; i < size - 1; i++) {
+        pipe(pipefds[i]);
+    }
+
+    for (int i = 0; i < size; i++){
+        pid_t pid = fork();
+        pids.push_back(pid);
+        if (pid == 0) {
+            // Child process
+            if (i == 0) {
+                // write to the next pipe
+                dup2(pipefds[i][1], STDOUT_FILENO);
+            }else if (i < size - 1){
+                // read from the previous pipe, write to the next pipe
+                dup2(pipefds[i-1][0], STDIN_FILENO);
+                dup2(pipefds[i][1], STDOUT_FILENO);
+            } else {
+                // read from the previous pipe
+                dup2(pipefds[i - 1][0], STDIN_FILENO);
+            }
+
+            for (int j = 0; j < size - 1; j++) {
+                close(pipefds[j][0]);
+                close(pipefds[j][1]);
+            }
+
+            char** argv = vectorToCharArray(cmd[i]);
+            execvp(argv[0], argv);
+
+            // free the memory
+            freeCharArray(argv);
+        }
+    }
+
+    // close all pipe fds in the parent
+    for (int i = 0; i < size - 1; i++) {
+        close(pipefds[i][0]);
+        close(pipefds[i][1]);
+    }
+    return pids;
+}
+
 void executeSequential(single_input* inputs, int size){
     for (int i = 0; i < size; i++){
         if (inputs[i].type == INPUT_TYPE_PIPELINE){
@@ -170,7 +219,31 @@ void executeSequential(single_input* inputs, int size){
 }
 
 void executeParallel(single_input* inputs, int size){
+    std::vector<pid_t> pids;
+    for (int i = 0; i < size; i++){
+        if (inputs[i].type == INPUT_TYPE_PIPELINE){
+            // append the result to the pids
+            std::vector<pid_t> res = executePipelineForParallel(inputs[i].data.pline.commands, inputs[i].data.pline.num_commands);
+            pids.insert(pids.end(), res.begin(), res.end());
+        } else if (inputs[i].type == INPUT_TYPE_COMMAND){
+            pid_t pid = fork();
+            if (pid == 0) {
+                // Child process
+                char** argv = vectorToCharArray(inputs[i].data.cmd);
+                execvp(argv[0], argv);
+                // free the memory
+                freeCharArray(argv);
+            }else{
+                // Parent process
+                pids.push_back(pid);
+            }
+        }
+    }
 
+    // wait all pids to finish
+    for (int i = 0; i < pids.size(); i++){
+        waitpid(pids[i], nullptr, 0);
+    }
 }
 
 void executeSubshell(single_input* inputs, int size){

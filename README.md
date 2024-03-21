@@ -22,4 +22,9 @@ PIPELINE
 
 cat eshell.cpp | grep pipe
 
-echo "hello" | grep o ; echo "zab" | grep b ; echo "zab" | grep a ; echo "finally" ; echo "zab" | grep z 
+sequential:
+echo "hello" |grep o ; echo "zab" |grep b ; echo "zab" |grep a ; echo "finally" ; echo "zab" |grep z
+echo "Hello"; sleep 5; echo "World"
+
+parallel:
+echo "Hello", sleep 5, echo "World"
