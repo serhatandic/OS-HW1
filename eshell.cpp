@@ -7,8 +7,8 @@
 #include "parser.h"
 
 
-void freeCharArray(char** argv, size_t size) {
-    for (size_t i = 0; i < size; ++i) {
+void freeCharArray(char** argv) {
+    for (size_t i = 0; argv[i] != nullptr; ++i) {
         delete[] argv[i];
     }
     delete[] argv;
@@ -48,7 +48,7 @@ void executeSingleCommand(const command& cmd) {
     
     // Free the memory
     size_t argvSize = sizeof(argv);
-    freeCharArray(argv, argvSize);
+    freeCharArray(argv);
 }
 
 void executePipeline(single_input* inputs, int size){
@@ -94,8 +94,7 @@ void executePipeline(single_input* inputs, int size){
             execvp(argv[0], argv);
 
             // free the memory
-            size_t argvSize = sizeof(argv);
-            freeCharArray(argv, argvSize);
+            freeCharArray(argv);
         }
     }
 
