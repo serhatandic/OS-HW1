@@ -246,8 +246,89 @@ void executeParallel(single_input* inputs, int size){
     }
 }
 
-void executeSubshell(single_input* inputs, int size){
+void executeSubshell(single_input line){
+    parsed_input input;
+    
+    parse_line(line.data.subshell, &input);
+    std::vector<pid_t> pids;
 
+    pid_t pid = fork();
+    pids.push_back(pid);
+
+    if (pid == 0) {
+        // Child process
+        if (input.num_inputs == 1 && input.inputs[0].type == INPUT_TYPE_COMMAND){
+            executeSingleCommand(input.inputs[0].data.cmd);
+        }else if (input.separator == SEPARATOR_PIPE){
+            executePipeline(input.inputs, input.num_inputs);
+        }else if (input.separator == SEPARATOR_SEQ){
+            executeSequential(input.inputs, input.num_inputs);
+        }else if (input.separator == SEPARATOR_PARA){
+            // according to above specifications 
+            int size = input.num_inputs;
+            int pipefds[size][2];
+            for (int i = 0; i < size; i++) {
+                pipe(pipefds[i]);
+            }
+
+            for (int i = 0; i < size; i++){
+                pid_t pidChild = fork();
+                pids.push_back(pidChild);
+
+                if (pidChild == 0) {
+                    // Child process
+                    
+                    // connect each child to the pipes
+                    dup2(pipefds[i][0], STDIN_FILENO);
+                    // dup2(pipefds[i][1], STDOUT_FILENO);
+
+                    // close all pipe fds
+                    for (int j = 0; j < size; j++) {
+                        close(pipefds[j][0]);
+                        close(pipefds[j][1]);
+                    }
+
+                    if (input.inputs[i].type == INPUT_TYPE_PIPELINE){
+                        executePipelineSubInput(input.inputs[i].data.pline.commands, input.inputs[i].data.pline.num_commands); 
+                    } else if (input.inputs[i].type == INPUT_TYPE_COMMAND){ 
+                        char** argv = vectorToCharArray(input.inputs[i].data.cmd);
+                        execvp(argv[0], argv);
+                        // free the memory
+                        freeCharArray(argv);
+                    }
+                }else{
+                    // Parent process
+                    for (int i = 0; i < size; i++) {
+                        close(pipefds[i][0]);
+                        close(pipefds[i][1]);
+                    }
+                }
+            }
+
+            pid_t pidRepeater = fork();
+            pids.push_back(pidRepeater);
+            if (pidRepeater == 0) {
+                for (int j = 0; j < size; j++) {
+                    close(pipefds[j][0]);
+                    write(pipefds[j][1], line.data.subshell, strlen(line.data.subshell));
+                }
+                for (int j = 0; j < size; j++) {
+                    close(pipefds[j][1]);
+                }
+            }else{
+                for (int i = 0; i < size; i++) {
+                    close(pipefds[i][0]);
+                    close(pipefds[i][1]);
+                }
+            }
+        }
+    }
+    for (int i = 0; i < pids.size(); i++){
+        waitpid(pids[i], nullptr, 0);
+        // remove the waited ones
+        pids.erase(pids.begin() + i);        
+    }
+    free_parsed_input(&input);
 }
 
 int main() {
@@ -268,8 +349,7 @@ int main() {
         }
 
         // Handle quit command
-        if (input.num_inputs == 1 && input.inputs[0].type == INPUT_TYPE_COMMAND &&
-            std::strcmp(input.inputs[0].data.cmd.args[0], "quit") == 0) {
+        if (input.num_inputs == 1 && input.inputs[0].type == INPUT_TYPE_COMMAND && std::strcmp(input.inputs[0].data.cmd.args[0], "quit") == 0) {
             break;
         }
 
@@ -283,7 +363,7 @@ int main() {
         } else if (input.separator == SEPARATOR_PARA){
             executeParallel(input.inputs, input.num_inputs);
         } else if (input.separator == SEPARATOR_NONE){
-            executeSubshell(input.inputs, input.num_inputs);
+            executeSubshell(input.inputs[0]);
         }
 
         // Clean up

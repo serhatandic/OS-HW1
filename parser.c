@@ -103,7 +103,6 @@ int parse_line(char *line, parsed_input *input) {
     // Initialize parsed_input
     memset(input, 0, sizeof(parsed_input));
     input->separator = SEPARATOR_NONE;
-    //printf("%s\n", line);
     current_char = line;
 
     int is_quote = 0;
