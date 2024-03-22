@@ -5,7 +5,6 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include "parser.h"
-#include <signal.h>
 
 void executeSubshell(single_input line);
 
@@ -353,8 +352,6 @@ int main() {
 
         // Handle quit command
         if (input.num_inputs == 1 && input.inputs[0].type == INPUT_TYPE_COMMAND && std::strcmp(input.inputs[0].data.cmd.args[0], "quit") == 0) {
-            // kill pid, it shouldn't print Killed message
-            kill(pid, SIGKILL);
             break;
         }
 
