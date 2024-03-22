@@ -41,4 +41,3 @@ subshell:
 
 
 (cat eshell.cpp | grep "free_parsed" | grep "input")
-(cat | wc -l , cat , grep "A")
