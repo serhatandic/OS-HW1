@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include "parser.h"
-
+#include <signal.h>
 
 void freeCharArray(char** argv) {
     for (size_t i = 0; argv[i] != nullptr; ++i) {
@@ -330,7 +330,7 @@ void executeSubshell(single_input line){
 int main() {
     std::string line;
     parsed_input input;
-
+    pid_t pid = getpid();
     while (true) {
         std::cout << "/> ";
         std::getline(std::cin, line);
@@ -346,6 +346,8 @@ int main() {
 
         // Handle quit command
         if (input.num_inputs == 1 && input.inputs[0].type == INPUT_TYPE_COMMAND && std::strcmp(input.inputs[0].data.cmd.args[0], "quit") == 0) {
+            // kill pid, it shouldn't print Killed message
+            kill(pid, SIGKILL);
             break;
         }
 
