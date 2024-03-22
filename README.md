@@ -37,7 +37,7 @@ subshell:
 (echo "Hello",  echo "Worldd", echo "zink", echo ":'(", echo "World")
 
 
-(echo "Hello" | grep "o", sleep 2, echo "Worldd" | grep "d", echo "zink" | grep "i", sleep 2, echo "World" | grep "o")
+(echo "Hello" | grep "o" | grep "o", sleep 2, echo "Worldd" | grep "d", echo "zink" | grep "i", sleep 2, echo "World" | grep "o")
 
 
 (cat eshell.cpp | grep "free_parsed" | grep "input")

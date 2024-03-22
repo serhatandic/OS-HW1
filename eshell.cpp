@@ -98,7 +98,6 @@ void executePipeline(single_input* inputs, int size){
 }
 
 void executePipelineSubInput(command* cmd, int size){
-    int pipefd[2]; // 0 is the read end, 1 is the write end
     // store pipe file descriptors
     int pipefds[size - 1][2];
     std::vector<pid_t> pids;
@@ -106,7 +105,6 @@ void executePipelineSubInput(command* cmd, int size){
     for (int i = 0; i < size - 1; i++) {
         pipe(pipefds[i]);
     }
-
     for (int i = 0; i < size; i++){
         pid_t pid = fork();
         pids.push_back(pid);
@@ -115,6 +113,7 @@ void executePipelineSubInput(command* cmd, int size){
             if (i == 0) {
                 // write to the next pipe
                 dup2(pipefds[i][1], STDOUT_FILENO);
+                
             }else if (i < size - 1){
                 // read from the previous pipe, write to the next pipe
                 dup2(pipefds[i-1][0], STDIN_FILENO);
@@ -123,30 +122,33 @@ void executePipelineSubInput(command* cmd, int size){
                 // read from the previous pipe
                 dup2(pipefds[i - 1][0], STDIN_FILENO);
             }
-
-            for (int j = 0; j < size - 1; j++) {
-                close(pipefds[j][0]);
-                close(pipefds[j][1]);
+            
+            // close all pipe fds
+            for (int i = 0; i < size - 1; i++) {
+                close(pipefds[i][0]);
+                close(pipefds[i][1]);
             }
+
+            // std::cout << "executing: " << i << " " << cmd[i].args[0] << " " << cmd[i].args[1] <<  "\n";
 
             char** argv = vectorToCharArray(cmd[i]);
             execvp(argv[0], argv);
 
             // free the memory
             freeCharArray(argv);
+        }else{
+            // reap
+            // close all pipe fds in the parent
+            // for (int i = 0; i < size - 1; i++) {
+            //     close(pipefds[i][0]);
+            //     close(pipefds[i][1]);
+            // }
+            waitpid(pid, nullptr, 0);
         }
     }
 
-    // close all pipe fds in the parent
-    for (int i = 0; i < size - 1; i++) {
-        close(pipefds[i][0]);
-        close(pipefds[i][1]);
-    }
 
-    // reap the child processes
-    for (int i = 0; i < size; i++){
-        waitpid(pids[i], nullptr, 0);
-    }
+
 }
 
 // dont wait for the pipeline to finish, rest is the same as subinput
@@ -167,7 +169,9 @@ std::vector<pid_t> executePipelineForParallel(command* cmd, int size){
             // Child process
             if (i == 0) {
                 // write to the next pipe
+                std::cout << "zınk" << std::endl;
                 dup2(pipefds[i][1], STDOUT_FILENO);
+                std::cout << "zınk" << std::endl;
             }else if (i < size - 1){
                 // read from the previous pipe, write to the next pipe
                 dup2(pipefds[i-1][0], STDIN_FILENO);
@@ -187,6 +191,12 @@ std::vector<pid_t> executePipelineForParallel(command* cmd, int size){
 
             // free the memory
             freeCharArray(argv);
+        }else{
+            // Parent process
+            for (int i = 0; i < size - 1; i++) {
+                close(pipefds[i][0]);
+                close(pipefds[i][1]);
+            }
         }
     }
 
@@ -271,6 +281,23 @@ void executeSubshell(single_input line){
                 pipe(pipefds[i]);
             }
 
+            pid_t pidRepeater = fork();
+            pids.push_back(pidRepeater);
+            if (pidRepeater == 0) {
+                for (int j = 0; j < size; j++) {
+                    close(pipefds[j][0]);
+                    write(pipefds[j][1], line.data.subshell, strlen(line.data.subshell));
+                }
+                for (int j = 0; j < size; j++) {
+                    close(pipefds[j][1]);
+                }
+            }else{
+                for (int i = 0; i < size; i++) {
+                    close(pipefds[i][0]);
+                    close(pipefds[i][1]);
+                }
+            }
+
             for (int i = 0; i < size; i++){
                 pid_t pidChild = fork();
                 pids.push_back(pidChild);
@@ -289,7 +316,7 @@ void executeSubshell(single_input line){
                     }
 
                     if (input.inputs[i].type == INPUT_TYPE_PIPELINE){
-                        executePipelineSubInput(input.inputs[i].data.pline.commands, input.inputs[i].data.pline.num_commands); 
+                        executePipelineForParallel(input.inputs[i].data.pline.commands, input.inputs[i].data.pline.num_commands); 
                     } else if (input.inputs[i].type == INPUT_TYPE_COMMAND){ 
                         char** argv = vectorToCharArray(input.inputs[i].data.cmd);
                         execvp(argv[0], argv);
@@ -304,29 +331,13 @@ void executeSubshell(single_input line){
                     }
                 }
             }
-
-            pid_t pidRepeater = fork();
-            pids.push_back(pidRepeater);
-            if (pidRepeater == 0) {
-                for (int j = 0; j < size; j++) {
-                    close(pipefds[j][0]);
-                    write(pipefds[j][1], line.data.subshell, strlen(line.data.subshell));
-                }
-                for (int j = 0; j < size; j++) {
-                    close(pipefds[j][1]);
-                }
-            }else{
-                for (int i = 0; i < size; i++) {
-                    close(pipefds[i][0]);
-                    close(pipefds[i][1]);
-                }
-            }
         }
     }
-    for (int i = 0; i < pids.size(); i++){
+
+    int size = pids.size();
+    for (int i = size - 1; i >= 0; i--){
         waitpid(pids[i], nullptr, 0);
-        // remove the waited ones
-        pids.erase(pids.begin() + i);        
+        pids.pop_back();
     }
     free_parsed_input(&input);
 }
