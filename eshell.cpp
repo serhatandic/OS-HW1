@@ -83,7 +83,6 @@ void executePipeline(single_input* inputs, int size){
         }
     }
 
-    // close all pipe fds in the parent
     for (int i = 0; i < size - 1; i++) {
         close(pipefds[i][0]);
         close(pipefds[i][1]);
@@ -93,8 +92,6 @@ void executePipeline(single_input* inputs, int size){
     for (int i = 0; i < pids.size(); i++){
         waitpid(pids[i], nullptr, 0);
     }
-
-
 }
 
 void executePipelineForCmd(command* cmd, int size){
@@ -288,19 +285,16 @@ void executeSubshell(single_input line){
                     }
                     write(pipefds[j][1], cmdStr.c_str(), cmdStr.size());
                     close(pipefds[j][1]);
+                    close(pipefds[j][0]);
                 }
             
-            }else{
-                for (int i = 0; i < size; i++) {
-                    close(pipefds[i][0]);
-                    close(pipefds[i][1]);
-                }
             }
 
             for (int i = 0; i < size; i++){        
                 // read from the pipe
                 char buffer[1024];
                 int n = read(pipefds[i][0], buffer, 1024);
+                close(pipefds[i][0]);
                 if (n == -1) {
                     exit(1);
                 }
@@ -320,7 +314,6 @@ void executeSubshell(single_input line){
                         }
                     }
                 }
-                close(pipefds[i][0]);
                 close(pipefds[i][1]);
                 free_parsed_input(&input2);
             }
