@@ -7,6 +7,8 @@
 #include "parser.h"
 #include <signal.h>
 
+void executeSubshell(single_input line);
+
 void freeCharArray(char** argv) {
     for (size_t i = 0; argv[i] != nullptr; ++i) {
         delete[] argv[i];
@@ -75,11 +77,16 @@ void executePipeline(single_input* inputs, int size){
                 close(pipefds[j][0]);
                 close(pipefds[j][1]);
             }
-            char** argv = vectorToCharArray(inputs[i].data.cmd);
-            execvp(argv[0], argv);
+            // command or subshell
+            if (inputs[i].type == INPUT_TYPE_COMMAND){
+                char** argv = vectorToCharArray(inputs[i].data.cmd);
+                execvp(argv[0], argv);
 
-            // free the memory
-            freeCharArray(argv);
+                // free the memory
+                freeCharArray(argv);
+            }else if (inputs[i].type == INPUT_TYPE_SUBSHELL){
+                executeSubshell(inputs[i]);
+            }
         }
     }
 
