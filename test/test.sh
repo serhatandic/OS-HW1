@@ -3,7 +3,7 @@
 # Path to eshell directory
 ESH_DIR=".."
 # Executable name
-ESH_EXEC="eshell"
+ESH_EXEC="eshellv2"
 # Full path to eshell executable
 ESH_PATH="$ESH_DIR/$ESH_EXEC"
 
