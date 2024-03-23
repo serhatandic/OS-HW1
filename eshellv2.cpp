@@ -46,8 +46,9 @@ void executePipeline(single_input* inputs, int size, bool parallel = false){
                 executeSingleCommand(inputs[i].data.cmd);
             }else if (inputs[i].type == INPUT_TYPE_SUBSHELL){
                 executeSubshell(inputs[i]);
-                //exit(0);
+                
             }
+            exit(0);
         }
     }
 
@@ -91,6 +92,7 @@ void executePipelineForCmd(command* cmds, int size, bool parallel){
 
             // command or subshell
             executeSingleCommand(cmds[i]);
+            exit(0);
         }
     }
 
@@ -110,6 +112,7 @@ void executeSequential(single_input* inputs, int size){
             pid_t pid = fork();
             if (pid == 0) {
                 executeSingleCommand(inputs[i].data.cmd);
+                exit(0);
             }else{
                 waitpid(pid, nullptr, 0);
             }
@@ -126,6 +129,7 @@ void executeParallel(single_input* inputs, int size){
             if (pid == 0) {
                 // Child process
                 executeSingleCommand(inputs[i].data.cmd);
+                exit(0);
             }
         }
     }
@@ -203,15 +207,19 @@ void executeSubshell(single_input line){
                     buffer[n] = '\0';
                     parsed_input input2;
                     parse_line(buffer, &input2);
-                    std::cout << "buffer is: " << buffer << "for i: " << i << std::endl;
                     if (input2.separator == SEPARATOR_PIPE){
                         executePipeline(input2.inputs, input2.num_inputs, true);
                         while(wait(nullptr) > 0);
-                        exit(0);
                     }else if (input2.num_inputs == 1 && input2.inputs[0].type == INPUT_TYPE_COMMAND){
-                        executeSingleCommand(input2.inputs[0].data.cmd);   
+                        pid_t pid2 = fork();
+                        if (pid2 == 0){
+                            executeSingleCommand(input2.inputs[0].data.cmd);   
+                        }else{
+                            waitpid(pid2, nullptr, 0);
+                        }
                     }
                     free_parsed_input(&input2);
+                    exit(0);
                 }
                 
             }
@@ -221,12 +229,12 @@ void executeSubshell(single_input line){
                 close(pipefds[i][1]);
             }
         }
+        // exit(0);
     }
 
     // reap the child processes
     while(wait(nullptr) > 0);
     free_parsed_input(&input);
-    
 }
 
 int main() {
