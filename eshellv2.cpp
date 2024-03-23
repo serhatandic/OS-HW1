@@ -62,10 +62,12 @@ void executePipeline(single_input* inputs, int size, bool parallel = false){
     }
 }
 
-void executePipelineForCmd(command* cmds, int size, bool parallel){
-    int pipefd[2]; // 0 is the read end, 1 is the write end
+void executePipelineForCmd(command* inputs, int size, bool parallel = false){
+    int pipefds[size - 1][2]; // 0 is the read end, 1 is the write end
     
-    pipe(pipefd);
+    for (int i = 0; i < size - 1; i++){
+        pipe(pipefds[i]);
+    }
 
     for (int i = 0; i < size ; i++){
         pid_t pid = fork();
@@ -73,37 +75,37 @@ void executePipelineForCmd(command* cmds, int size, bool parallel){
             // Child process
             if (i == 0) {
                 // write to the next pipe
-                close(pipefd[0]);
-                dup2(pipefd[1], STDOUT_FILENO);
-                close(pipefd[1]);
+                dup2(pipefds[i][1], STDOUT_FILENO);
             }else if (i < size - 1){
                 // read from the previous pipe, write to the next pipe
-                dup2(pipefd[0], STDIN_FILENO);
-                dup2(pipefd[1], STDOUT_FILENO);
+                dup2(pipefds[i - 1][0], STDIN_FILENO);
+                dup2(pipefds[i][1], STDOUT_FILENO);
 
-                close(pipefd[0]);
-                close(pipefd[1]);
             } else {
                 // read from the previous pipe
-                close(pipefd[1]);
-                dup2(pipefd[0], STDIN_FILENO);
-                close(pipefd[0]);
+                dup2(pipefds[i - 1][0], STDIN_FILENO);
+            }
+
+            for (int j = 0; j < size - 1; j++){
+                close(pipefds[j][0]);
+                close(pipefds[j][1]);
             }
 
             // command or subshell
-            executeSingleCommand(cmds[i]);
+            executeSingleCommand(inputs[i]);
             exit(0);
         }
     }
 
-    close(pipefd[0]);
-    close(pipefd[1]);
+    for (int i = 0; i < size - 1; i++){
+        close(pipefds[i][0]);
+        close(pipefds[i][1]);
+    }
     // reap the child processes
     if (!parallel){
         while(wait(nullptr) > 0);
     }
 }
-
 void executeSequential(single_input* inputs, int size){
     for (int i = 0; i < size; i++){
         if (inputs[i].type == INPUT_TYPE_PIPELINE){
