@@ -1,0 +1,1 @@
+cat lorem_ipsum.txt | grep 'Lorem' | wc -l | xargs echo "Number of lines containing 'Lorem':"

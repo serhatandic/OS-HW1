@@ -1,0 +1,1 @@
+cat lorem_ipsum.txt | ( tr /a-z/ /A-Z/ | wc -l  ; echo '2382 + 8232 + 043 * 232') | bc

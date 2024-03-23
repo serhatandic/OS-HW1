@@ -1,0 +1,1 @@
+( grep 'mi' lorem_ipsum.txt | wc -l ; cat lorem_ipsum.txt | sort | tail -n -1 )

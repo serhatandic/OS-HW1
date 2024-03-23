@@ -1,0 +1,2 @@
+( cat lorem_ipsum.txt | head -c 20 | tr /a-z/ /A-Z/ | tr /O/ /0/ | xargs echo ) 
+
