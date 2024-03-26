@@ -32,7 +32,7 @@ subshell:
 
 (cat input.txt | grep "a") | (grep "a" ,tr /a-z/ /A-Z/ )
 
-(cat input.txt | grep "a") | (cat input.txt | grep "a")  | (grep "a" ,tr /a-z/ /A-Z/ )
+(cat input.txt | grep "a") | (cat input.txt | grep "a")  | (grep "k" ,tr /a-z/ /A-Z/ )
 (cat input.txt | grep "a")  | (grep "k" , grep "p" )
 (cat input.txt | grep "a")  | (grep "a" ; grep "p"; grep "p" ; grep "p" ; grep "a" )
 (cat input.txt | grep "a")  | (grep "a" , grep "p", grep "p" , grep "p" , grep "a" )

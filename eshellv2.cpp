@@ -46,7 +46,6 @@ void executePipeline(single_input* inputs, int size, bool parallel = false){
                 executeSingleCommand(inputs[i].data.cmd);
             }else if (inputs[i].type == INPUT_TYPE_SUBSHELL){
                 executeSubshell(inputs[i]);
-                
             }
             exit(0);
         }
@@ -162,68 +161,53 @@ void executeSubshell(single_input line){
             for (int i = 0; i < size; i++){
                 pipe(pipefds[i]);
             }
-
-            for (int j = 0; j < size; j++) {
-                std::string cmdStr;
-                if (input.inputs[j].type == INPUT_TYPE_COMMAND){
-                    command cmd = input.inputs[j].data.cmd;
-                    for (int k = 0; cmd.args[k] != NULL; k++) {
-                        cmdStr += cmd.args[k];
-                        // Write a space or a newline after each argument
-                        char separator = (cmd.args[k+1] != NULL) ? ' ' : '\n';
-                        cmdStr += separator;
-                    }
-                }
-                if (input.inputs[j].type == INPUT_TYPE_PIPELINE){
-                    for (int k = 0; k < input.inputs[j].data.pline.num_commands; k++){
-                        command cmd = input.inputs[j].data.pline.commands[k];
-                        for (int l = 0; cmd.args[l] != NULL; l++) {
-                            cmdStr += cmd.args[l];
-                            cmdStr += ' ';
-                        }
-                        if (k != input.inputs[j].data.pline.num_commands - 1){
-                            cmdStr += "| ";
-                        }
-                    }                        
-                }
-
-                write(pipefds[j][1], cmdStr.c_str(), cmdStr.size());
-            }
-
-            
+                        
             for (int i = 0; i < size; i++){
                 pid_t pid = fork();
                 if (pid == 0){
-                    // read from the pipe
-                    char buffer[1024];
-                    int n = read(pipefds[i][0], buffer, 1024);
-
-                    for (int j = 0; j < size; j++){
+                    
+                    dup2(pipefds[i][0], STDIN_FILENO);
+                    for (int j = 0; j < size; j++) {
                         close(pipefds[j][0]);
                         close(pipefds[j][1]);
                     }
-
-                    if (n == -1) {
-                        break;
-                    }
-                    buffer[n] = '\0';
-                    parsed_input input2;
-                    parse_line(buffer, &input2);
-                    if (input2.separator == SEPARATOR_PIPE){
-                        executePipeline(input2.inputs, input2.num_inputs, true);
+                    if (input.inputs[i].type == INPUT_TYPE_PIPELINE){
+                        executePipeline(input.inputs, input.num_inputs, true);
                         while(wait(nullptr) > 0);
-                    }else if (input2.num_inputs == 1 && input2.inputs[0].type == INPUT_TYPE_COMMAND){
+                    }else if (input.inputs[i].type == INPUT_TYPE_COMMAND) {
                         pid_t pid2 = fork();
                         if (pid2 == 0){
-                            executeSingleCommand(input2.inputs[0].data.cmd);   
+                            // std::cout << "executing " << input.inputs[i].data.cmd.args[0] << std::endl;
+                            executeSingleCommand(input.inputs[i].data.cmd);   
                         }else{
                             waitpid(pid2, nullptr, 0);
                         }
                     }
-                    free_parsed_input(&input2);
+                    free_parsed_input(&input);
+                    for (int j = 0; j < size; j++){
+                        close(pipefds[j][0]);
+                        close(pipefds[j][1]);
+                    }
                     exit(0);
                 }
                 
+            }
+
+            pid_t pid2 = fork();
+            if (pid2 == 0){
+                std::string line;
+                // repeater
+                while (std::getline(std::cin, line)){
+                    for (int i = 0; i < size; i++){
+                        write(pipefds[i][1], line.c_str(), line.size());
+                    }
+                }
+
+                for (int i = 0; i < size; i++){
+                    close(pipefds[i][0]);
+                    close(pipefds[i][1]);
+                }
+                exit(0);
             }
 
             for (int i = 0; i < size; i++){
