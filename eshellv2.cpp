@@ -214,6 +214,7 @@ void executeSubshell(single_input line){
                 }
                 exit(0);
             }else{
+                repeaterPid = pid2;
                 count += 1;
             }
 
@@ -230,8 +231,15 @@ void executeSubshell(single_input line){
                     count -= 1;
                 }
 
+                if (waited == pid2){
+                    count -= 1;
+                }
+
+                if (count == 0){
+                    break;
+                }
+
                 if (count == 1){
-                    std::cout << "Killing repeater" << std::endl;
                     kill(repeaterPid, SIGKILL);
                 }
             };
