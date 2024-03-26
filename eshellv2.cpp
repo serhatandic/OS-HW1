@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include "parser.h"
+#include <signal.h>
 
 void executeSubshell(single_input line);
 
@@ -18,7 +19,6 @@ void executePipeline(single_input* inputs, int size, bool parallel = false){
     for (int i = 0; i < size - 1; i++){
         pipe(pipefds[i]);
     }
-
     for (int i = 0; i < size ; i++){
         pid_t pid = fork();
         if (pid == 0) {
@@ -89,8 +89,7 @@ void executePipelineForCmd(command* inputs, int size, bool parallel = false){
                 close(pipefds[j][0]);
                 close(pipefds[j][1]);
             }
-
-            // command or subshell
+            
             executeSingleCommand(inputs[i]);
             exit(0);
         }
@@ -143,6 +142,9 @@ void executeSubshell(single_input line){
     parsed_input input;
     
     parse_line(line.data.subshell, &input);
+    int count = 0;
+    pid_t repeaterPid;
+
     pid_t pid = fork();
 
     if (pid == 0) {
@@ -165,14 +167,13 @@ void executeSubshell(single_input line){
             for (int i = 0; i < size; i++){
                 pid_t pid = fork();
                 if (pid == 0){
-                    
                     dup2(pipefds[i][0], STDIN_FILENO);
                     for (int j = 0; j < size; j++) {
                         close(pipefds[j][0]);
                         close(pipefds[j][1]);
                     }
                     if (input.inputs[i].type == INPUT_TYPE_PIPELINE){
-                        executePipeline(input.inputs, input.num_inputs, true);
+                        executePipelineForCmd(input.inputs[i].data.pline.commands, input.inputs[i].data.pline.num_commands, true);
                         while(wait(nullptr) > 0);
                     }else if (input.inputs[i].type == INPUT_TYPE_COMMAND) {
                         pid_t pid2 = fork();
@@ -189,6 +190,8 @@ void executeSubshell(single_input line){
                         close(pipefds[j][1]);
                     }
                     exit(0);
+                }else{
+                    count += 1;
                 }
                 
             }
@@ -197,6 +200,7 @@ void executeSubshell(single_input line){
             if (pid2 == 0){
                 std::string line;
                 // repeater
+                signal(SIGPIPE, SIG_IGN);
                 while (std::getline(std::cin, line)){
                     line += "\n";
                     for (int i = 0; i < size; i++){
@@ -209,14 +213,31 @@ void executeSubshell(single_input line){
                     close(pipefds[i][1]);
                 }
                 exit(0);
+            }else{
+                count += 1;
             }
 
             for (int i = 0; i < size; i++){
                 close(pipefds[i][0]);
                 close(pipefds[i][1]);
             }
+
+            pid_t waited;
+            while(true){
+                waited = wait(nullptr);
+                
+                if (waited != pid2){
+                    count -= 1;
+                }
+
+                if (count == 1){
+                    std::cout << "Killing repeater" << std::endl;
+                    kill(repeaterPid, SIGKILL);
+                }
+            };
+
         }
-        while(wait(nullptr) > 0);
+
         exit(0);
     }
 
