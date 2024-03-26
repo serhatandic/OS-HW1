@@ -198,6 +198,7 @@ void executeSubshell(single_input line){
                 std::string line;
                 // repeater
                 while (std::getline(std::cin, line)){
+                    line += "\n";
                     for (int i = 0; i < size; i++){
                         write(pipefds[i][1], line.c_str(), line.size());
                     }
@@ -215,11 +216,12 @@ void executeSubshell(single_input line){
                 close(pipefds[i][1]);
             }
         }
-        // exit(0);
+        while(wait(nullptr) > 0);
+        exit(0);
     }
 
-    // reap the child processes
     while(wait(nullptr) > 0);
+    // reap the child processes
     free_parsed_input(&input);
 }
 
