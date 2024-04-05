@@ -11,6 +11,7 @@ void executeSubshell(single_input line);
 
 void executeSingleCommand(const command& cmd) {
     execvp(cmd.args[0], cmd.args);
+    exit(1);
 }
 
 void executePipeline(single_input* inputs, int size, bool parallel = false){

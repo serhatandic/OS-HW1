@@ -3,6 +3,7 @@
 single command:
 echo -e "test\npipeline\nexecution" | tr 'a-z' 'A-Z'
 echo -e "test\npipeline\nexecution" | grep "pipeline" | tr 'a-z' 'A-Z'
+echo -e "test\npipeline\nexecution" | grep "ğ" | tr 'a-z' 'A-Z'
 
 pipeline:
 cat eshell.cpp | grep "pipe"
@@ -39,3 +40,12 @@ subshell:
 (cat input.txt | grep "a") | (grep "a" , grep "p", grep "p" , grep "p" , grep "a" )
 
 # gpt generated
+
+
+
+tar -czvf hw1.tar.gz ./eshell.cpp ./parser.c ./parser.h ./makefile
+
+(echo "hello", echo "hello") | (wc, wc, wc, wc)
+hello
+hi
+hi
