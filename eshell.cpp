@@ -177,13 +177,13 @@ void executeSubshell(single_input line){
                         executePipelineForCmd(input.inputs[i].data.pline.commands, input.inputs[i].data.pline.num_commands, true);
                         while(wait(nullptr) > 0);
                     }else if (input.inputs[i].type == INPUT_TYPE_COMMAND) {
-                        pid_t pid2 = fork();
-                        if (pid2 == 0){
+                        // pid_t pid2 = fork();
+                        // if (pid2 == 0){
                             // std::cout << "executing " << input.inputs[i].data.cmd.args[0] << std::endl;
                             executeSingleCommand(input.inputs[i].data.cmd);   
-                        }else{
-                            waitpid(pid2, nullptr, 0);
-                        }
+                        // }else{
+                        //     waitpid(pid2, nullptr, 0);
+                        // }
                     }
                     free_parsed_input(&input);
                     for (int j = 0; j < size; j++){
