@@ -10,12 +10,8 @@
 void executeSubshell(single_input line);
 
 void executeSingleCommand(const command& cmd) {
-    if (fork() == 0){
-        execvp(cmd.args[0], cmd.args);
-        exit(0);
-    }else{
-        wait(nullptr);
-    }
+    execvp(cmd.args[0], cmd.args);
+    exit(1);
 }
 
 void executePipeline(single_input* inputs, int size, bool parallel = false){
@@ -181,13 +177,13 @@ void executeSubshell(single_input line){
                         executePipelineForCmd(input.inputs[i].data.pline.commands, input.inputs[i].data.pline.num_commands, true);
                         while(wait(nullptr) > 0);
                     }else if (input.inputs[i].type == INPUT_TYPE_COMMAND) {
-                        // pid_t pid2 = fork();
-                        // if (pid2 == 0){
+                        pid_t pid2 = fork();
+                        if (pid2 == 0){
                             // std::cout << "executing " << input.inputs[i].data.cmd.args[0] << std::endl;
                             executeSingleCommand(input.inputs[i].data.cmd);   
-                        // }else{
-                        //     waitpid(pid2, nullptr, 0);
-                        // }
+                        }else{
+                            waitpid(pid2, nullptr, 0);
+                        }
                     }
                     free_parsed_input(&input);
                     for (int j = 0; j < size; j++){
@@ -283,7 +279,12 @@ int main() {
 
         // Execute single command
         if (input.num_inputs == 1 && input.inputs[0].type == INPUT_TYPE_COMMAND) {
-            executeSingleCommand(input.inputs[0].data.cmd);
+            pid_t pid = fork();
+            if (pid == 0) {
+                executeSingleCommand(input.inputs[0].data.cmd);
+            } else {
+                waitpid(pid, nullptr, 0);
+            }
         }else if (input.separator == SEPARATOR_PIPE){
             executePipeline(input.inputs, input.num_inputs);
         }else if (input.separator == SEPARATOR_SEQ){
