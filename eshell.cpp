@@ -203,13 +203,24 @@ void executeSubshell(single_input line){
                 std::string line;
                 // repeater
                 signal(SIGPIPE, SIG_IGN);
-                while (std::getline(std::cin, line)){
-                    line += "\n";
+                // while (std::getline(std::cin, line)){
+                //     line += "\n";
+                //     for (int i = 0; i < size; i++){
+                //         write(pipefds[i][1], line.c_str(), line.size());
+                //     }
+                // }
+                // instead of above approach, read char by char and write to all pipes
+
+                while (true){
+                    char c;
+                    int n = read(STDIN_FILENO, &c, 1);
+                    if (n == 0){
+                        break;
+                    }
                     for (int i = 0; i < size; i++){
-                        write(pipefds[i][1], line.c_str(), line.size());
+                        write(pipefds[i][1], &c, 1);
                     }
                 }
-
                 for (int i = 0; i < size; i++){
                     close(pipefds[i][0]);
                     close(pipefds[i][1]);
