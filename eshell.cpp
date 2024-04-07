@@ -185,6 +185,7 @@ void executeSubshell(single_input line){
                             waitpid(pid2, nullptr, 0);
                         }
                     }
+
                     free_parsed_input(&input);
                     for (int j = 0; j < size; j++){
                         close(pipefds[j][0]);
