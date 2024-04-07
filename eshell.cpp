@@ -10,8 +10,12 @@
 void executeSubshell(single_input line);
 
 void executeSingleCommand(const command& cmd) {
-    execvp(cmd.args[0], cmd.args);
-    exit(1);
+    if (fork() == 0){
+        execvp(cmd.args[0], cmd.args);
+        exit(0);
+    }else{
+        wait(nullptr);
+    }
 }
 
 void executePipeline(single_input* inputs, int size, bool parallel = false){
@@ -279,12 +283,7 @@ int main() {
 
         // Execute single command
         if (input.num_inputs == 1 && input.inputs[0].type == INPUT_TYPE_COMMAND) {
-            pid_t pid = fork();
-            if (pid == 0) {
-                executeSingleCommand(input.inputs[0].data.cmd);
-            } else {
-                waitpid(pid, nullptr, 0);
-            }
+            executeSingleCommand(input.inputs[0].data.cmd);
         }else if (input.separator == SEPARATOR_PIPE){
             executePipeline(input.inputs, input.num_inputs);
         }else if (input.separator == SEPARATOR_SEQ){
