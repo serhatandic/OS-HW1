@@ -1,0 +1,1 @@
+( echo 0.5 | xargs sleep , cat ./output/06-parallel_execution_mixed_timed.out | cut -d ' ' -f1 | xargs sleep, echo "working" )

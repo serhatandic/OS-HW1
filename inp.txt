@@ -1,0 +1,2 @@
+(ls -l /usr/lib | grep x) | ( tr /a-z/ /A-Z/ , echo done) | wc -l
+quit

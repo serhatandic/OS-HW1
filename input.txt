@@ -1,0 +1,3 @@
+zıbAb
+B
+(ls -l /usr/lib | grep x) | (echo done,tr /a-c/ /A-C/ )
