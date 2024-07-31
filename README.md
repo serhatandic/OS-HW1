@@ -1,4 +1,5 @@
 # OS-HW1
+test commands:
 
 single command:
 echo -e "test\npipeline\nexecution" | tr 'a-z' 'A-Z'
@@ -38,14 +39,3 @@ subshell:
 (cat input.txt | grep "a") | (grep "k" , grep "p" )
 (cat input.txt | grep "a") | (grep "a" ; grep "p"; grep "p" ; grep "p" ; grep "a" )
 (cat input.txt | grep "a") | (grep "a" , grep "p", grep "p" , grep "p" , grep "a" )
-
-# gpt generated
-
-
-
-tar -czvf hw1.tar.gz ./eshell.cpp ./parser.c ./parser.h ./makefile
-
-(echo "hello", echo "hello") | (wc, wc, wc, wc)
-hello
-hi
-hi
